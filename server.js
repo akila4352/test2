@@ -180,7 +180,7 @@ app.put('/api/borrowedbooks/:id', async (req, res) => {
     const { data, error } = await supabase
       .from('borrowedbooks')
       .update({ status })
-      ;
+      .eq('id', id);
 
     if (error) throw error;
     res.status(200).json(data);
