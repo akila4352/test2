@@ -129,6 +129,80 @@ app.post('/api/auth/send-otp', async (req, res) => {
     res.status(500).json({ message: 'Failed to send OTP' });
   }
 });
+//Admin panel**************************************************************
+// Fetch all books
+app.get('/api/books', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('books').select('*');
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Error fetching books:', error);
+    res.status(500).send('Error fetching books');
+  }
+});
+
+// Add a new book
+app.post('/api/books', async (req, res) => {
+  const { title, description, is_available, imgsrc } = req.body;
+
+  try {
+    const { data, error } = await supabase.from('books').insert([
+      { title, description, is_available, imgsrc },
+    ]);
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (error) {
+    console.error('Error adding book:', error);
+    res.status(500).send('Error adding book');
+  }
+});
+
+// Delete a book
+app.delete('/api/books/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { data, error } = await supabase.from('books').delete().eq('id', id);
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Error deleting book:', error);
+    res.status(500).send('Error deleting book');
+  }
+});
+
+// Update the status of a borrowed book
+app.put('/api/borrowedbooks/:id', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    const { data, error } = await supabase
+      .from('borrowedbooks')
+      .update({ status })
+      .eq('id', id);
+
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Error updating borrowed book status:', error);
+    res.status(500).send('Error updating borrowed book status');
+  }
+});
+
+// Fetch borrowed books
+app.get('/api/borrowedbooks', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('borrowedbooks')
+      .select('*, books (title, imgsrc)');
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Error fetching borrowed books:', error);
+    res.status(500).send('Error fetching borrowed books');
+  }
+});
 
 // Default route
 app.get('/', (req, res) => {
