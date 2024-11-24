@@ -3,6 +3,7 @@ const path = require('path');
 const crypto = require('crypto'); // Import crypto for hashing
 const nodemailer = require('nodemailer'); // Import nodemailer
 const { createClient } = require('@supabase/supabase-js'); // Import Supabase client
+require('dotenv').config();
 
 const app = express();
 
