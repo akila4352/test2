@@ -38,9 +38,11 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(400).json({ message: 'Please fill all required fields.' });
   }
 
+  // Hash password with SHA-256
   const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
 
   try {
+    // Insert user into Supabase table
     const { data, error } = await supabase
       .from('users')
       .insert([
