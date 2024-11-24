@@ -6,6 +6,8 @@ const { createClient } = require('@supabase/supabase-js'); // Import Supabase cl
 require('dotenv').config();
 
 const app = express();
+const cors = require('cors');
+app.use(cors());
 
 // Middleware for parsing JSON requests
 app.use(express.json());
