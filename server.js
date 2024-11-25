@@ -264,6 +264,39 @@ app.get('/borrowed-books', async (req, res) => {
 
   res.json({ books: data });
 });
+// Endpoint for resetting the password
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { email, newPassword } = req.body;
+
+  if (!email || !newPassword) {
+    return res.status(400).json({ message: 'Email and new password are required.' });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({ message: 'Password must be at least 8 characters long.' });
+  }
+
+  try {
+    // Hash the password using SHA-256
+    const hashedPassword = crypto.createHash('sha256').update(newPassword).digest('hex');
+
+    // Update the password in Supabase
+    const { data, error } = await supabase
+      .from('users')
+      .update({ password: hashedPassword })
+      .eq('email', email);
+
+    if (error) {
+      console.error('Error updating password:', error.message);
+      return res.status(500).json({ message: 'Failed to reset password.' });
+    }
+
+    res.status(200).json({ message: 'Password reset successfully.' });
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({ message: 'An error occurred.' });
+  }
+});
 // Default route
 app.get('/', (req, res) => {
   res.send('Hello, Heroku! Your Node.js app is running.');
