@@ -260,7 +260,7 @@ app.get('/borrowed-books', async (req, res) => {
       const { data, error } = await supabase
           .from('borrowedbooks')
           .select('*, books(title)')
-          .eq('user_id', userId);
+          .eq('user_id', 1);
 
       if (error) {
           console.error("Error fetching borrowed books:", error);
