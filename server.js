@@ -1,8 +1,8 @@
 const express = require('express');
 const path = require('path');
-const crypto = require('crypto'); // For hashing passwords
-const nodemailer = require('nodemailer'); // For sending emails
-const { createClient } = require('@supabase/supabase-js'); // Supabase client
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
 const app = express();
@@ -21,16 +21,14 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY
 );
 
-// Nodemailer transporter configuration
+// Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER, // Use environment variable
-    pass: process.env.EMAIL_APP_PASSWORD, // App password from environment variable
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_APP_PASSWORD,
   },
 });
-
-// *** Authentication Endpoints ***
 
 // Registration endpoint
 app.post('/api/auth/register', async (req, res) => {
@@ -40,11 +38,9 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(400).json({ message: 'Please fill all required fields.' });
   }
 
-  // Hash password with SHA-256
   const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
 
   try {
-    // Insert user into Supabase table
     const { data, error } = await supabase
       .from('users')
       .insert([
@@ -84,7 +80,7 @@ app.post('/api/auth/login', async (req, res) => {
 
   try {
     const { data, error } = await supabase
-      .from(userType === 'admin' ? 'admins' : 'users') // Select table based on user type
+      .from(userType === 'admin' ? 'admins' : 'users')
       .select('first_name, password')
       .eq('email', email);
 
@@ -114,10 +110,6 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/send-otp', async (req, res) => {
   const { email } = req.body;
 
-  if (!email) {
-    return res.status(400).json({ message: 'Email is required.' });
-  }
-
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   const mailOptions = {
@@ -136,8 +128,6 @@ app.post('/api/auth/send-otp', async (req, res) => {
   }
 });
 
-// *** Admin Panel Endpoints ***
-
 // Fetch all books
 app.get('/api/books', async (req, res) => {
   try {
@@ -154,10 +144,6 @@ app.get('/api/books', async (req, res) => {
 app.post('/api/books', async (req, res) => {
   const { title, description, is_available, imgsrc } = req.body;
 
-  if (!title || !description || typeof is_available !== 'boolean' || !imgsrc) {
-    return res.status(400).json({ message: 'Please provide all required fields.' });
-  }
-
   try {
     const { data, error } = await supabase.from('books').insert([
       { title, description, is_available, imgsrc },
@@ -173,11 +159,6 @@ app.post('/api/books', async (req, res) => {
 // Delete a book
 app.delete('/api/books/:id', async (req, res) => {
   const { id } = req.params;
-
-  if (!id) {
-    return res.status(400).json({ message: 'Book ID is required.' });
-  }
-
   try {
     const { data, error } = await supabase.from('books').delete().eq('id', id);
     if (error) throw error;
@@ -188,48 +169,33 @@ app.delete('/api/books/:id', async (req, res) => {
   }
 });
 
-// Fetch borrowed books
-app.get('/api/borrowedbooks', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('borrowedbooks')
-      .select('*, books (title, imgsrc)');
-    if (error) throw error;
-    res.status(200).json(data);
-  } catch (error) {
-    console.error('Error fetching borrowed books:', error);
-    res.status(500).send('Error fetching borrowed books');
-  }
-});
+// Borrow a book
+app.post('/api/borrow-book', async (req, res) => {
+  const { userId, bookId, borrowDate } = req.body;
 
-// Update borrowed book status
-app.put('/api/borrowedbooks/:id', async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-
-  if (!id || typeof status !== 'boolean') {
-    return res.status(400).json({ message: 'Invalid request.' });
+  if (!userId || !bookId || !borrowDate) {
+    return res.status(400).json({ message: 'Please provide user ID, book ID, and borrow date.' });
   }
 
   try {
-    const { data, error } = await supabase
-      .from('borrowedbooks')
-      .update({ status })
-      .eq('id', id);
+    const { data, error } = await supabase.from('borrowed_books').insert([
+      { user_id: userId, book_id: bookId, borrow_date: borrowDate },
+    ]);
     if (error) throw error;
-    res.status(200).json(data);
+
+    res.status(201).json({ message: 'Book borrowed successfully!', data });
   } catch (error) {
-    console.error('Error updating borrowed book status:', error);
-    res.status(500).send('Error updating borrowed book status');
+    console.error('Error borrowing book:', error);
+    res.status(500).send('Error borrowing book');
   }
 });
 
-// *** Default Route ***
+// Default route
 app.get('/', (req, res) => {
   res.send('Hello, Heroku! Your Node.js app is running.');
 });
 
-// *** Start Server ***
+// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
