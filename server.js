@@ -248,6 +248,31 @@ app.post('/borrow-book', async (req, res) => {
     return res.status(500).json({ message: 'An error occurred while borrowing the book.' });
   }
 });
+// Endpoint to fetch borrowed books
+app.get('/borrowed-books', async (req, res) => {
+  const { userId } = req.query; // Expect userId as a query parameter
+
+  if (!userId) {
+      return res.status(400).send({ error: 'User ID is required' });
+  }
+
+  try {
+      const { data, error } = await supabase
+          .from('borrowedbooks')
+          .select('*, books(title)')
+          .eq('user_id', userId);
+
+      if (error) {
+          console.error("Error fetching borrowed books:", error);
+          return res.status(500).send({ error: "Error fetching borrowed books" });
+      }
+
+      res.status(200).send({ books: data });
+  } catch (err) {
+      console.error("Server error:", err);
+      res.status(500).send({ error: "Internal server error" });
+  }
+});
 
 // Default route
 app.get('/', (req, res) => {
