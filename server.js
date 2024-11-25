@@ -268,7 +268,7 @@ app.get('/borrowed-books', async (req, res) => {
           title
         )
       `)
-      .eq('user_id', userId);
+    ;
 
     if (error) {
       console.error('Error fetching borrowed books:', error);
