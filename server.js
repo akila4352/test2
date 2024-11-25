@@ -203,6 +203,51 @@ app.get('/api/borrowedbooks', async (req, res) => {
     res.status(500).send('Error fetching borrowed books');
   }
 });
+// Handle book borrow
+app.post('/borrow-book', async (req, res) => {
+  const { userId, bookId } = req.body;
+
+  try {
+    // Check if the user has an unreturned book
+    const { data: borrowedBooks, error: fetchError } = await supabase
+      .from('borrowedbooks')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', false); // Assuming false means the book is not returned
+
+    if (fetchError) {
+      console.error('Error checking borrowed books:', fetchError);
+      return res.status(500).json({ message: 'Failed to check borrowed books.' });
+    }
+
+    // Prevent borrowing if there’s an unreturned book
+    if (borrowedBooks.length > 0) {
+      return res.status(400).json({ message: 'You must return your current borrowed book before borrowing another.' });
+    }
+
+    // Proceed to borrow the book
+    const { data, error } = await supabase
+      .from('borrowedbooks')
+      .insert([
+        {
+          book_id: bookId,
+          user_id: userId,
+          status: false, // Mark as not returned
+        },
+      ]);
+
+    if (error) {
+      console.error('Error borrowing book:', error);
+      return res.status(500).json({ message: 'Failed to borrow book.' });
+    }
+
+    return res.status(200).json({ message: 'Book borrowed successfully! Return within 7 days.' });
+
+  } catch (error) {
+    console.error('Error in borrowing book:', error);
+    return res.status(500).json({ message: 'An error occurred while borrowing the book.' });
+  }
+});
 
 // Default route
 app.get('/', (req, res) => {
