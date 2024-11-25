@@ -1,8 +1,8 @@
 const express = require('express');
 const path = require('path');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
-const { createClient } = require('@supabase/supabase-js');
+const crypto = require('crypto'); // Import crypto for hashing
+const nodemailer = require('nodemailer'); // Import nodemailer
+const { createClient } = require('@supabase/supabase-js'); // Import Supabase client
 require('dotenv').config();
 
 const app = express();
@@ -25,8 +25,8 @@ const supabase = createClient(
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD,
+    user: process.env.EMAIL_USER, // Use environment variable
+    pass: process.env.EMAIL_APP_PASSWORD, // Use app password from environment variable
   },
 });
 
@@ -38,9 +38,11 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(400).json({ message: 'Please fill all required fields.' });
   }
 
+  // Hash password with SHA-256
   const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
 
   try {
+    // Insert user into Supabase table
     const { data, error } = await supabase
       .from('users')
       .insert([
@@ -80,7 +82,7 @@ app.post('/api/auth/login', async (req, res) => {
 
   try {
     const { data, error } = await supabase
-      .from(userType === 'admin' ? 'admins' : 'users')
+      .from(userType === 'admin' ? 'admins' : 'users') // Select table based on user type
       .select('first_name, password')
       .eq('email', email);
 
@@ -127,7 +129,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
     res.status(500).json({ message: 'Failed to send OTP' });
   }
 });
-
+//Admin panel**************************************************************
 // Fetch all books
 app.get('/api/books', async (req, res) => {
   try {
@@ -169,24 +171,36 @@ app.delete('/api/books/:id', async (req, res) => {
   }
 });
 
-// Borrow a book
-app.post('/api/borrow-book', async (req, res) => {
-  const { userId, bookId, borrowDate } = req.body;
-
-  if (!userId || !bookId || !borrowDate) {
-    return res.status(400).json({ message: 'Please provide user ID, book ID, and borrow date.' });
-  }
+// Update the status of a borrowed book
+app.put('/api/borrowedbooks/:id', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
 
   try {
-    const { data, error } = await supabase.from('borrowed_books').insert([
-      { user_id: userId, book_id: bookId, borrow_date: borrowDate },
-    ]);
-    if (error) throw error;
+    const { data, error } = await supabase
+      .from('borrowedbooks')
+      .update({ status })
+      .eq('id', id);
 
-    res.status(201).json({ message: 'Book borrowed successfully!', data });
+    if (error) throw error;
+    res.status(200).json(data);
   } catch (error) {
-    console.error('Error borrowing book:', error);
-    res.status(500).send('Error borrowing book');
+    console.error('Error updating borrowed book status:', error);
+    res.status(500).send('Error updating borrowed book status');
+  }
+});
+
+// Fetch borrowed books
+app.get('/api/borrowedbooks', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('borrowedbooks')
+      .select('*, books (title, imgsrc)');
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Error fetching borrowed books:', error);
+    res.status(500).send('Error fetching borrowed books');
   }
 });
 
