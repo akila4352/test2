@@ -1,8 +1,8 @@
 const express = require('express');
 const path = require('path');
-const crypto = require('crypto'); // Import crypto for hashing
-const nodemailer = require('nodemailer'); // Import nodemailer
-const { createClient } = require('@supabase/supabase-js'); // Import Supabase client
+const crypto = require('crypto'); // For hashing passwords
+const nodemailer = require('nodemailer'); // For sending emails
+const { createClient } = require('@supabase/supabase-js'); // Supabase client
 require('dotenv').config();
 
 const app = express();
@@ -21,14 +21,16 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY
 );
 
-// Nodemailer transporter
+// Nodemailer transporter configuration
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER, // Use environment variable
-    pass: process.env.EMAIL_APP_PASSWORD, // Use app password from environment variable
+    pass: process.env.EMAIL_APP_PASSWORD, // App password from environment variable
   },
 });
+
+// *** Authentication Endpoints ***
 
 // Registration endpoint
 app.post('/api/auth/register', async (req, res) => {
@@ -112,6 +114,10 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/send-otp', async (req, res) => {
   const { email } = req.body;
 
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required.' });
+  }
+
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   const mailOptions = {
@@ -129,7 +135,9 @@ app.post('/api/auth/send-otp', async (req, res) => {
     res.status(500).json({ message: 'Failed to send OTP' });
   }
 });
-//Admin panel**************************************************************
+
+// *** Admin Panel Endpoints ***
+
 // Fetch all books
 app.get('/api/books', async (req, res) => {
   try {
@@ -146,6 +154,10 @@ app.get('/api/books', async (req, res) => {
 app.post('/api/books', async (req, res) => {
   const { title, description, is_available, imgsrc } = req.body;
 
+  if (!title || !description || typeof is_available !== 'boolean' || !imgsrc) {
+    return res.status(400).json({ message: 'Please provide all required fields.' });
+  }
+
   try {
     const { data, error } = await supabase.from('books').insert([
       { title, description, is_available, imgsrc },
@@ -161,6 +173,11 @@ app.post('/api/books', async (req, res) => {
 // Delete a book
 app.delete('/api/books/:id', async (req, res) => {
   const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: 'Book ID is required.' });
+  }
+
   try {
     const { data, error } = await supabase.from('books').delete().eq('id', id);
     if (error) throw error;
@@ -168,25 +185,6 @@ app.delete('/api/books/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting book:', error);
     res.status(500).send('Error deleting book');
-  }
-});
-
-// Update the status of a borrowed book
-app.put('/api/borrowedbooks/:id', async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-
-  try {
-    const { data, error } = await supabase
-      .from('borrowedbooks')
-      .update({ status })
-      .eq('id', id);
-
-    if (error) throw error;
-    res.status(200).json(data);
-  } catch (error) {
-    console.error('Error updating borrowed book status:', error);
-    res.status(500).send('Error updating borrowed book status');
   }
 });
 
@@ -204,12 +202,34 @@ app.get('/api/borrowedbooks', async (req, res) => {
   }
 });
 
-// Default route
+// Update borrowed book status
+app.put('/api/borrowedbooks/:id', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!id || typeof status !== 'boolean') {
+    return res.status(400).json({ message: 'Invalid request.' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('borrowedbooks')
+      .update({ status })
+      .eq('id', id);
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Error updating borrowed book status:', error);
+    res.status(500).send('Error updating borrowed book status');
+  }
+});
+
+// *** Default Route ***
 app.get('/', (req, res) => {
   res.send('Hello, Heroku! Your Node.js app is running.');
 });
 
-// Start server
+// *** Start Server ***
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
