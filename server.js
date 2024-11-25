@@ -280,7 +280,7 @@ app.get('/borrowed-books', async (req, res) => {
     console.error('Server error:', err);
     res.status(500).send({ error: 'Internal server error' });
   }
-
+});
 // Default route
 app.get('/', (req, res) => {
   res.send('Hello, Heroku! Your Node.js app is running.');
