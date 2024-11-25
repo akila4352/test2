@@ -250,36 +250,19 @@ app.post('/borrow-book', async (req, res) => {
 });
 /// nava bar cart popup fetch borro book
 app.get('/borrowed-books', async (req, res) => {
-  const userId = parseInt(req.query.userId, 10);
+  const userId = req.query.userId;
 
-  if (isNaN(userId)) {
-    return res.status(400).send({ error: 'Invalid User ID' });
+  // Fetch all data from the borrowed_books table for a specific user
+  const { data, error } = await supabase
+    .from('borrowed_books')
+    .select('*');// Select all columns
+
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('borrowedbooks')
-      .select(`
-        id,
-        borrowed_at,
-        return_by,
-        status,
-        books (
-          title
-        )
-      `)
-    ;
-
-    if (error) {
-      console.error('Error fetching borrowed books:', error);
-      return res.status(500).send({ error: 'Error fetching borrowed books' });
-    }
-
-    res.status(200).json({ books: data });
-  } catch (err) {
-    console.error('Server error:', err);
-    res.status(500).send({ error: 'Internal server error' });
-  }
+  res.json({ books: data });
 });
 // Default route
 app.get('/', (req, res) => {
